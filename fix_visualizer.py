@@ -1,31 +1,49 @@
+import re
+
+new_visualizer_code = """
 "use client";
-import React, { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+
+import React, { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { audioEngine } from '@/lib/audio';
+import { audioEngine, AudioConfig } from '@/lib/audio';
 
 interface AudioVisualizerProps {
   isPlaying: boolean;
-  frequency: number; // Carrier frequency
+  frequency: number;
+  config: AudioConfig;
 }
 
 const vertexShader = `
   uniform float uTime;
   uniform float uAudioAverage;
+  uniform float uAudioHigh;
   uniform float uFrequency;
+  
+  uniform float uFractal;
+  uniform float uCrossFreq;
+  uniform float uPhaseVel;
+  uniform float uHarmonic;
+  uniform float uZeroEntropy;
   
   attribute float aSize;
   attribute vec3 aBasePosition;
   attribute float aPhase;
+  attribute float aPhiRatio;
   
   varying float vAudioInt;
   varying vec3 vPos;
+  varying float vPhiRatio;
+  varying float vCoupling;
   
+  const float PHI = 1.618033988749895;
+
   // Generic 3D noise function
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
   vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+  
   float snoise(vec3 v) {
     const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
     const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
@@ -75,25 +93,40 @@ const vertexShader = `
   void main() {
     vAudioInt = uAudioAverage;
     vPos = aBasePosition;
+    vPhiRatio = aPhiRatio;
     
-    // Create organic movement using simplex noise
+    vec3 pos = position;
+
+    // Organic movement base
     float noise1 = snoise(vec3(aBasePosition.x * 0.003, aBasePosition.y * 0.003, uTime * 0.15));
     float noise2 = snoise(vec3(aBasePosition.y * 0.003, aBasePosition.z * 0.003, uTime * 0.15 + 100.0));
     float noise3 = snoise(vec3(aBasePosition.z * 0.003, aBasePosition.x * 0.003, uTime * 0.15 + 200.0));
-    
-    vec3 pos = position;
-    
+
     // Frequency modulation
     float freqEffect = uFrequency * 0.0005;
-    
-    // Displacement heavily influenced by audio bass
+
+    // Golden Ratio scaling for Fractal Resonance
+    if (uFractal > 0.5) {
+       float scale = pow(PHI, mod(aPhiRatio * 8.0 + uTime * 0.2, 4.0)) / 2.0;
+       pos = normalize(pos) * (length(aBasePosition) * scale);
+    }
+
+    // Displacement influenced by audio bass + noise
+    float noiseScale = (1.0 - uZeroEntropy); // Zero entropy = zero random noise
     float dispAmt = 15.0 + (uAudioAverage * 250.0);
-    pos.x += noise1 * dispAmt;
-    pos.y += noise2 * dispAmt;
-    pos.z += noise3 * dispAmt;
+    
+    pos.x += noise1 * dispAmt * noiseScale;
+    pos.y += noise2 * dispAmt * noiseScale;
+    pos.z += noise3 * dispAmt * noiseScale;
     
     // Swirl based on audio
     float angle = uTime * (0.1 + freqEffect + uAudioAverage * 0.5) + aPhase;
+    
+    if (uZeroEntropy > 0.5) {
+        // Rigid structure swirling
+        angle = uTime * 0.1 + aPhase;
+    }
+    
     float s = sin(angle);
     float c = cos(angle);
     float xnew = pos.x * c - pos.z * s;
@@ -101,10 +134,54 @@ const vertexShader = `
     pos.x = xnew;
     pos.z = znew;
 
+    // Cross-Frequency Coupling: Theta carrying Gamma
+    if (uCrossFreq > 0.5) {
+       float thetaCarrier = sin(pos.y * 0.01 + uTime * 0.5) * 0.5 + 0.5;
+       float gammaMod = sin(pos.x * 0.1 + uTime * 4.0) * uAudioHigh;
+       float cfcEffect = thetaCarrier * gammaMod * 60.0;
+       pos.z += cfcEffect;
+       vCoupling = thetaCarrier;
+    } else {
+       vCoupling = 0.0;
+    }
+    
+    // Phase Velocity 4D Tensor mapping
+    if (uPhaseVel > 0.5) {
+       float w = sin(uTime * 0.5 + aPhase);
+       float s4 = sin(w);
+       float c4 = cos(w);
+       
+       float nx = pos.x * c4 - pos.z * s4;
+       float nz = pos.x * s4 + pos.z * c4;
+       pos.x = nx;
+       pos.z = nz;
+       
+       // Cranial standing wave nodes
+       float nodeDist = abs(sin(length(pos) * 0.01));
+       pos *= mix(1.0, nodeDist, 0.5 * uAudioAverage);
+    }
+    
+    // Harmonic Violations / Glitch
+    if (uHarmonic > 0.5) {
+       float irrationalF = 3.14159265;
+       float err = sin(pos.x * irrationalF) * cos(pos.y * 2.71828);
+       pos.xyz += err * 15.0 * uAudioAverage;
+    }
+    
+    // Zero Entropy strictness
+    if (uZeroEntropy > 0.5) {
+       vec3 targetSphere = normalize(pos) * (length(aBasePosition) + 100.0 * uAudioAverage);
+       float order = smoothstep(0.0, 1.0, uAudioAverage + 0.5);
+       pos = mix(pos, targetSphere, order * 0.9);
+    }
+
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     
-    // Audio responsive size, closer particles are larger
     float dynamicSize = aSize * (1.0 + uAudioAverage * 8.0);
+    if (uZeroEntropy > 0.5) {
+        dynamicSize = aSize * 0.6; // Crystalline points
+    }
+    
     gl_PointSize = dynamicSize * (350.0 / -mvPosition.z);
     gl_Position = projectionMatrix * mvPosition;
   }
@@ -115,9 +192,18 @@ const fragmentShader = `
   uniform float uFrequency;
   uniform float uAudioAverage;
   
+  uniform float uZeroEntropy;
+  uniform float uHarmonic;
+  uniform float uFractal;
+  uniform float uCrossFreq;
+  
   varying float vAudioInt;
   varying vec3 vPos;
+  varying float vPhiRatio;
+  varying float vCoupling;
   
+  const float PHI = 1.618033988749895;
+
   vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
@@ -128,42 +214,65 @@ const fragmentShader = `
     float dist = length(gl_PointCoord - vec2(0.5));
     if (dist > 0.5) discard;
     
-    // Glowing soft particle core
     float alpha = pow(1.0 - (dist * 2.0), 1.8);
     
-    // Dynamic color calculation based on user's carrier frequency
+    if (uZeroEntropy > 0.5) {
+       alpha = 1.0 - smoothstep(0.4, 0.5, dist);
+    }
+
     float baseHue = mod(uFrequency / 360.0, 1.0);
     float hueOffset = vPos.x * 0.0008 + vPos.y * 0.0008 + uTime * 0.05;
+    
     float finalHue = mod(baseHue + hueOffset + (uAudioAverage * 0.8), 1.0);
     
-    // Increase saturation and value on loud sounds
+    if (uFractal > 0.5) {
+       finalHue = mod(vPhiRatio * PHI + (uAudioAverage * 0.5), 1.0);
+    }
+    
+    if (uHarmonic > 0.5) {
+       finalHue += sin(vPos.z * 0.1 + uTime) * 0.2;
+    }
+    
     float sat = mix(0.7, 1.0, uAudioAverage);
     float val = mix(0.8, 1.0, uAudioAverage);
     
+    if (uZeroEntropy > 0.5) {
+       sat = 1.0;
+       val = 1.0;
+       finalHue = mix(finalHue, 0.6, 0.6); // Bias to blue/cyan coherence
+    }
+
+    if (uCrossFreq > 0.5) {
+       val += vCoupling * uAudioAverage * 3.0; // Glow pulse on theta peaks
+       sat -= vCoupling * 0.3; // Whiter on peaks
+    }
+    
     vec3 color = hsv2rgb(vec3(finalHue, sat, val));
     
-    // Core white hot center on extreme bass
     vec3 finalColor = mix(color, vec3(1.0), uAudioAverage * (1.0 - dist * 4.0));
     
     gl_FragColor = vec4(finalColor, alpha * (0.2 + uAudioAverage * 0.8));
   }
 `;
 
-const Particles = ({ isPlaying, frequency }: { isPlaying: boolean, frequency: number }) => {
+const Particles = ({ isPlaying, frequency, config }: AudioVisualizerProps) => {
   const pointsRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const dataArray = useMemo(() => new Uint8Array(2048 / 2), []);
+  const { clock } = useThree();
   
   const numParticles = 25000;
   
-  const [positions, sizes, bases, phases] = useMemo(() => {
+  const [positions, sizes, bases, phases, phiRatios] = useMemo(() => {
     const pos = new Float32Array(numParticles * 3);
     const sz = new Float32Array(numParticles);
     const b = new Float32Array(numParticles * 3);
     const ph = new Float32Array(numParticles);
+    const pr = new Float32Array(numParticles);
+    
+    const PHI = 1.618033988749895;
     
     for(let i = 0; i < numParticles; i++) {
-      // Create a dense core and sparse outer orbital cloud
       const radiusDistribution = Math.pow(Math.random(), 2);
       const r = 20 + radiusDistribution * 450;
       
@@ -184,36 +293,68 @@ const Particles = ({ isPlaying, frequency }: { isPlaying: boolean, frequency: nu
       
       sz[i] = Math.random() * 2.5 + 0.5;
       ph[i] = Math.random() * Math.PI * 2;
+      pr[i] = (i % 8) / PHI; 
     }
-    return [pos, sz, b, ph];
+    return [pos, sz, b, ph, pr];
   }, [numParticles]);
 
   useFrame((state) => {
     if (!materialRef.current || !pointsRef.current) return;
     
     let avgAudio = 0;
+    let highAudio = 0;
+    
     if (isPlaying) {
       audioEngine.getAnalyserData(dataArray);
-      let sum = 0;
-      // Focus heavily on sub-bass and lower mids for impactful visuals
+      let sumLow = 0;
+      let sumHigh = 0;
+      
       for (let i = 0; i < 15; i++) { 
-        sum += dataArray[i];
+         sumLow += dataArray[i];
       }
-      avgAudio = sum / (15 * 255);
+      for (let i = 100; i < 150; i++) {
+         sumHigh += dataArray[i];
+      }
+      avgAudio = sumLow / (15 * 255);
+      highAudio = sumHigh / (50 * 255);
     }
     
     materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-    // Smooth the audio reactivity slightly so it feels organic
+    
     materialRef.current.uniforms.uAudioAverage.value = THREE.MathUtils.lerp(
       materialRef.current.uniforms.uAudioAverage.value,
       avgAudio,
       0.15
     );
+    
+    materialRef.current.uniforms.uAudioHigh.value = THREE.MathUtils.lerp(
+      materialRef.current.uniforms.uAudioHigh.value,
+      highAudio,
+      0.2
+    );
+    
     materialRef.current.uniforms.uFrequency.value = frequency;
     
-    // Slow environmental rotation
-    pointsRef.current.rotation.y = state.clock.elapsedTime * 0.04;
-    pointsRef.current.rotation.z = state.clock.elapsedTime * 0.015;
+    materialRef.current.uniforms.uFractal.value = config.fractalResonance ? 1.0 : 0.0;
+    materialRef.current.uniforms.uCrossFreq.value = config.crossFrequencyCoupling ? 1.0 : 0.0;
+    materialRef.current.uniforms.uPhaseVel.value = config.phaseVelocity4D ? 1.0 : 0.0;
+    materialRef.current.uniforms.uHarmonic.value = config.harmonicViolations ? 1.0 : 0.0;
+    materialRef.current.uniforms.uZeroEntropy.value = config.zeroEntropySpectrum ? 1.0 : 0.0;
+    
+    let rotY = state.clock.elapsedTime * 0.04;
+    let rotZ = state.clock.elapsedTime * 0.015;
+    
+    if (config.zeroEntropySpectrum) {
+      rotY = state.clock.elapsedTime * 0.02; // Slower coherent rotation
+      rotZ = state.clock.elapsedTime * 0.005;
+    }
+    
+    if (config.phaseVelocity4D) {
+      rotY += Math.sin(state.clock.elapsedTime * 0.1) * 0.5;
+    }
+    
+    pointsRef.current.rotation.y = THREE.MathUtils.lerp(pointsRef.current.rotation.y, rotY, 0.05);
+    pointsRef.current.rotation.z = THREE.MathUtils.lerp(pointsRef.current.rotation.z, rotZ, 0.05);
   });
 
   return (
@@ -223,6 +364,7 @@ const Particles = ({ isPlaying, frequency }: { isPlaying: boolean, frequency: nu
         <bufferAttribute attach="attributes-aBasePosition" count={numParticles} array={bases} itemSize={3} />
         <bufferAttribute attach="attributes-aSize" count={numParticles} array={sizes} itemSize={1} />
         <bufferAttribute attach="attributes-aPhase" count={numParticles} array={phases} itemSize={1} />
+        <bufferAttribute attach="attributes-aPhiRatio" count={numParticles} array={phiRatios} itemSize={1} />
       </bufferGeometry>
       <shaderMaterial
         ref={materialRef}
@@ -231,7 +373,13 @@ const Particles = ({ isPlaying, frequency }: { isPlaying: boolean, frequency: nu
         uniforms={{
           uTime: { value: 0 },
           uAudioAverage: { value: 0 },
-          uFrequency: { value: frequency }
+          uAudioHigh: { value: 0 },
+          uFrequency: { value: frequency },
+          uFractal: { value: 0 },
+          uCrossFreq: { value: 0 },
+          uPhaseVel: { value: 0 },
+          uHarmonic: { value: 0 },
+          uZeroEntropy: { value: 0 }
         }}
         transparent={true}
         blending={THREE.AdditiveBlending}
@@ -241,12 +389,17 @@ const Particles = ({ isPlaying, frequency }: { isPlaying: boolean, frequency: nu
   );
 };
 
-export default function AudioVisualizer({ isPlaying, frequency }: AudioVisualizerProps) {
+export default function AudioVisualizer({ isPlaying, frequency, config }: AudioVisualizerProps) {
   return (
     <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-90">
       <Canvas camera={{ position: [0, 0, 500], fov: 60 }} gl={{ antialias: false, alpha: true }}>
-        <Particles isPlaying={isPlaying} frequency={frequency} />
+        <Particles isPlaying={isPlaying} frequency={frequency} config={config} />
       </Canvas>
     </div>
   );
 }
+"""
+
+with open("components/AudioVisualizer.tsx", "w") as f:
+    f.write(new_visualizer_code)
+

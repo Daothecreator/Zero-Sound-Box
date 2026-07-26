@@ -4,7 +4,7 @@ import AcousticSynthesizer from '@/components/AcousticSynthesizer';
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-black p-4 md:p-24 relative overflow-hidden">
+    <main className="flex flex-col items-center bg-black p-2 md:p-12 relative w-full min-h-screen">
       <AcousticSynthesizer />
     </main>
   );

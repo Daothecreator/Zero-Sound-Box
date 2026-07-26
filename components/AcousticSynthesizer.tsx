@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Radio, Play, Square, Activity, Waves, Headphones, BrainCircuit, Wind, Sliders, AlignCenter, Volume2, VolumeX } from 'lucide-react';
+import { Check, Radio, Play, Square, Activity, Waves, Headphones, BrainCircuit, Wind, Sliders, AlignCenter, Volume2, VolumeX } from 'lucide-react';
 import { audioEngine, AudioConfig } from '@/lib/audio';
 import dynamic from 'next/dynamic';
 
 import BinauralFieldMap from "./BinauralFieldMap";
-const AudioVisualizer = dynamic(() => import('./AudioVisualizer'), { ssr: false });
+const QuantumDustBackground = dynamic(() => import('./QuantumDustBackground'), { ssr: false });
 
 export const MODES = {
   complex: {
@@ -73,11 +73,13 @@ const EMF_PRESETS = [
 ];
 
 export default function AcousticSynthesizer() {
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeMode, setActiveMode] = useState<string>('complex');
   const [diagnostics, setDiagnostics] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [volume, setVolume] = useState(1.0);
+  const [visualizerMode, setVisualizerMode] = useState<string>('spiral');
   
   const [config, setConfig] = useState<AudioConfig>({
     leftFreq: 136.1,
@@ -124,6 +126,13 @@ export default function AcousticSynthesizer() {
     highResMicrodynamics: false,
     ambisonicEnvironment: false,
     psychoacousticCompression: false,
+
+    phaseVelocity4D: false,
+    crossFrequencyCoupling: false,
+    harmonicViolations: false,
+    zeroEntropySpectrum: false,
+    fractalResonance: false,
+    biofeedbackSync: false,
     mode: MODES.complex
   });
 
@@ -159,112 +168,127 @@ export default function AcousticSynthesizer() {
     }
   };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    setVolume(val);
-    audioEngine.setVolume(val);
-  };
-
-  const handleCarrierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const base = parseFloat(e.target.value);
-    const diff = config.rightFreq - config.leftFreq;
-    applyConfig({
-      ...config,
-      leftFreq: base,
-      rightFreq: base + diff
-    });
-  };
-
-  const handleEntrainmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const beat = parseFloat(e.target.value);
-    applyConfig({
-      ...config,
-      rightFreq: config.leftFreq + beat
-    });
-  };
-
-  const handleHarmonicDecayChange = (index: number, value: number) => {
-    const newPartials = [...config.mode.partials];
-    newPartials[index] = { ...newPartials[index], decay: value };
-    applyConfig({
-      ...config,
-      mode: {
-        ...config.mode,
-        partials: newPartials
-      }
-    });
-  };
-
-  const handleHarmonicPhaseChange = (index: number, value: number) => {
-    const newPartials = [...config.mode.partials];
-    newPartials[index] = { ...newPartials[index], phase: value };
-    applyConfig({
-      ...config,
-      mode: {
-        ...config.mode,
-        partials: newPartials
-      }
-    });
-  };
-
-  const handleSpatialChange = (idx: number, x: number, y: number) => {
-    const newPartials = [...config.mode.partials];
-    newPartials[idx] = { ...newPartials[idx], posX: x, posY: y };
-    applyConfig({
-      ...config,
-      mode: { ...config.mode, partials: newPartials }
-    });
-  };
-  const handlePhaseReset = () => {
-    // Reset all phases to 0 for absolute coherence
-    const newPartials = config.mode.partials.map(p => ({ ...p, phase: 0 }));
-    applyConfig({
-      ...config,
-      mode: {
-        ...config.mode,
-        partials: newPartials
-      }
-    });
-  };
-
-  const handleEmfPresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    applyConfig({
-      ...config,
-      emfFreq: parseFloat(e.target.value)
-    });
-  };
-
   const selectMode = (modeId: string) => {
     setActiveMode(modeId);
-    applyConfig({
-      ...config,
-      mode: MODES[modeId as keyof typeof MODES]
-    });
+    applyConfig({ ...config, mode: MODES[modeId as keyof typeof MODES] });
   };
 
   const currentModeConfig = MODES[activeMode as keyof typeof MODES];
+
+  const handleBinauralChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyConfig({ ...config, rightFreq: config.leftFreq + Number(e.target.value) });
+  };
+  
   const currentBeat = config.rightFreq - config.leftFreq;
+  
+  const handleEntrainmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyConfig({ ...config, rightFreq: config.leftFreq + Number(e.target.value) });
+  };
+  
+  const handleSpatialChange = (index: number, x: number, y: number) => {
+    const newPartials = [...config.mode.partials];
+    newPartials[index] = {
+        ...newPartials[index],
+        posX: x,
+        posY: y,
+    };
+    applyConfig({
+        ...config,
+        mode: {
+            ...config.mode,
+            partials: newPartials
+        }
+    });
+  };
+
+  const handleSpatialChangeList = (newPartials: any[]) => {
+    applyConfig({
+        ...config,
+        mode: {
+            ...config.mode,
+            partials: newPartials
+        }
+    });
+  };
+
+
+  const handleHarmonicDecayChange = (idx: number, val: number) => {
+    const newPartials = [...config.mode.partials];
+    newPartials[idx].decay = val;
+    handleSpatialChangeList(newPartials);
+  };
+  
+  const handleHarmonicPhaseChange = (idx: number, val: number) => {
+    const newPartials = [...config.mode.partials];
+    newPartials[idx].phase = val;
+    handleSpatialChangeList(newPartials);
+  };
+
+  const handlePhaseReset = () => {
+    const newPartials = config.mode.partials.map(p => ({...p, phase: 0}));
+    handleSpatialChangeList(newPartials);
+  };
+
+  const handleEmfPresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyConfig({ ...config, emfFreq: Number(e.target.value) });
+  };
+
+  const handleCarrierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyConfig({ ...config, leftFreq: Number(e.target.value) });
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVal = Number(e.target.value);
+    setVolume(newVal);
+    audioEngine.setVolume(newVal);
+  };
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto flex flex-col items-center justify-center p-8 z-10 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl overflow-hidden mt-8 mb-16">
-      <div className="absolute inset-0 z-[-1] pointer-events-none">
-         <AudioVisualizer isPlaying={isPlaying} frequency={config.leftFreq} />
-      </div>
-      
-      <div className="z-10 flex flex-col items-center space-y-10 w-full pt-6 pb-6">
-        
-        <div className="text-center space-y-4">
+    <>
+    <QuantumDustBackground isPlaying={isPlaying} config={config} activeMode={visualizerMode} />
+
+    {/* Visualizer Mode Selector */}
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col space-y-2 hud-panel">
+      {[
+        { id: 'spiral', label: 'φ-Spiral' },
+        { id: 'lorenz', label: 'Lorenz' },
+        { id: 'crystal', label: 'Crystal' },
+        { id: 'ring', label: 'Ring' }
+      ].map((mode) => (
+        <button
+          key={mode.id}
+          onClick={() => setVisualizerMode(mode.id)}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+            visualizerMode === mode.id 
+              ? 'bg-white/20 border border-white/50 text-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+              : 'bg-black/40 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80'
+          }`}
+          title={mode.label}
+        >
+          <div className="text-[10px] font-mono leading-none">{mode.id.substring(0, 3).toUpperCase()}</div>
+        </button>
+      ))}
+    </div>
+
+    <div 
+      ref={containerRef}
+      className="relative w-full max-w-6xl mx-auto flex flex-col items-center z-10 bg-black/40 rounded-2xl md:rounded-3xl border border-white/10 shadow-2xl mt-4 md:mt-8 mb-[10rem] md:mb-24 p-4 md:p-8" 
+      style={{ textShadow: '0 0 20px rgba(255,255,255,0.15)' }}
+    >
+      <div className="z-10 flex flex-col items-center space-y-8 w-full pt-2 pb-6">
+        <div className="text-center space-y-2">
           <h1 className="text-3xl font-light tracking-widest text-white/90">NEURO-ACOUSTIC MODULATOR</h1>
-          <p className="text-sm text-white/50 font-mono tracking-widest uppercase">
+          <p className="text-sm text-white/50 font-mono tracking-widest uppercase mb-6">
             Physiological & Psychoacoustic Frequency Engine
           </p>
-          
-          <div className="flex justify-center flex-wrap gap-4 pt-4">
+        </div>
+        
+        <div className="flex justify-start md:justify-center overflow-x-auto gap-4 pt-4 pb-2 w-full px-4 custom-scrollbar">
             {Object.values(MODES).map((mode) => (
               <button
                 key={mode.id}
                 onClick={() => selectMode(mode.id)}
-                className={`px-4 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition-all ${
+                className={`px-4 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-shrink-0 ${
                   activeMode === mode.id
                     ? 'bg-white/20 text-white border border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.2)]'
                     : 'bg-white/5 text-white/50 border border-transparent hover:bg-white/10 hover:text-white/80'
@@ -274,7 +298,7 @@ export default function AcousticSynthesizer() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-white/40 font-sans tracking-wide max-w-md mx-auto leading-relaxed pt-2 h-12">
+          <p className="text-xs text-white/40 font-sans tracking-wide max-w-md mx-auto leading-relaxed pt-2 text-center px-4">
             {currentModeConfig.description}
           </p>
         </div>
@@ -295,7 +319,7 @@ export default function AcousticSynthesizer() {
         </button>
 
 
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 px-4 pt-4">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-4 pt-4 md:px-8">
           {/* Column 1 */}
           <div className="space-y-6">
           {/* Main Frequencies Panel */}
@@ -326,7 +350,7 @@ export default function AcousticSynthesizer() {
                   onChange={handleCarrierChange}
                   value={CARRIER_PRESETS.find(p => p.freq === config.leftFreq) ? config.leftFreq : "custom"}
                 >
-                  <option value="custom" disabled hidden>Custom ({config.leftFreq.toFixed(1)} Hz)</option>
+                  <option value="custom" disabled hidden>Custom ({(config.leftFreq || 0).toFixed(1)} Hz)</option>
                   {CARRIER_PRESETS.map(p => (
                     <option key={p.freq} value={p.freq}>{p.name} ({p.freq} Hz)</option>
                   ))}
@@ -361,7 +385,7 @@ export default function AcousticSynthesizer() {
                   onChange={handleEntrainmentChange}
                   value={ENTRAINMENT_PRESETS.find(p => p.beat === currentBeat) ? currentBeat : "custom"}
                 >
-                  <option value="custom" disabled hidden>Custom Delta ({currentBeat.toFixed(1)} Hz)</option>
+                  <option value="custom" disabled hidden>Custom Delta ({(currentBeat || 0).toFixed(1)} Hz)</option>
                   {ENTRAINMENT_PRESETS.map(p => (
                     <option key={p.beat} value={p.beat}>{p.name}</option>
                   ))}
@@ -379,7 +403,7 @@ export default function AcousticSynthesizer() {
           </div>
 
       {/* High-Resolution Ambisonics & Microdynamics Panel */}
-      <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col h-full">
+      <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col">
           <div className="flex items-center space-x-2 border-b border-white/10 pb-3 mb-4">
             <Radio className="w-4 h-4 text-blue-400" />
             <h2 className="text-sm font-mono text-blue-400 uppercase tracking-widest">High-Definition Acoustic Rendering (24-bit / 96kHz)</h2>
@@ -387,7 +411,7 @@ export default function AcousticSynthesizer() {
           <p className="text-xs text-white/40 leading-relaxed mb-4">
             Activate professional-grade algorithmic rendering utilizing interaural time difference (ITD), micro-dynamics, phase geometry, and psychophysical compression. (Requires high-fidelity stereo headphones).
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {[
               { id: 'ambisonicEnvironment', name: 'Ambisonic & Room Realism', desc: 'True binaural spatialization. Multi-stage reflections, diffusion, and algorithmic convolution reverb. Generates realistic volumetric spaces.' },
               { id: 'highResMicrodynamics', name: 'Microdynamics & Microtones', desc: 'Infinite procedural modulation of micro-pitch (cents) and micro-volume. Replicates natural organic acoustic fluctuation to prevent auditory fatigue.' },
@@ -531,7 +555,7 @@ export default function AcousticSynthesizer() {
               <BinauralFieldMap partials={config.mode.partials} onChange={handleSpatialChange} />
             </div>
       {/* Advanced Psychoacoustics & Phenomena Panel */}
-        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col h-full">
+        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col">
             <div className="flex items-center space-x-2 border-b border-white/10 pb-3 mb-4">
               <Activity className="w-4 h-4 text-white/60" />
               <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">Advanced Psychoacoustics & Phenomena</h2>
@@ -540,7 +564,7 @@ export default function AcousticSynthesizer() {
               Activate deeply researched auditory illusions, physiological resonances, and acoustic phenomena. Some features may require high-fidelity headphones or robust subwoofers to manifest correctly.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
               {[
                 { id: 'gammaRhythms', name: 'Gamma Rhythms', desc: 'Binaural beats oscillating at 40Hz for hyper-focus.' },
                 { id: 'infrasound', name: 'Infrasonic Waves', desc: '12Hz subsonic modulation. Felt, not heard.' },
@@ -591,7 +615,7 @@ export default function AcousticSynthesizer() {
           {/* Column 3 */}
           <div className="space-y-6">
             {/* Harmonic Decay Panel */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col h-full">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col">
               <div className="flex items-center space-x-2 border-b border-white/10 pb-3 mb-4">
                 <Sliders className="w-4 h-4 text-white/60" />
                 <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">Resonance Envelopes</h2>
@@ -603,7 +627,7 @@ export default function AcousticSynthesizer() {
                 {config.mode.partials.map((partial, idx) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex justify-between text-xs font-mono text-white/50">
-                      <span>Harmonic {idx + 1} ({partial.ratio.toFixed(2)}x)</span>
+                      <span>Harmonic {idx + 1} ({(partial.ratio || 0).toFixed(2)}x)</span>
                       <span>{partial.decay?.toFixed(1) || 2.5}s</span>
                     </div>
                     <input
@@ -618,7 +642,7 @@ export default function AcousticSynthesizer() {
             </div>
 
             {/* Phase Alignment Panel */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col h-full">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col">
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
                 <div className="flex items-center space-x-2">
                   <AlignCenter className="w-4 h-4 text-white/60" />
@@ -638,7 +662,7 @@ export default function AcousticSynthesizer() {
                 {config.mode.partials.map((partial, idx) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex justify-between text-xs font-mono text-white/50">
-                      <span>Harmonic {idx + 1} ({partial.ratio.toFixed(2)}x)</span>
+                      <span>Harmonic {idx + 1} ({(partial.ratio || 0).toFixed(2)}x)</span>
                       <span>{partial.phase || 0}°</span>
                     </div>
                     <input
@@ -712,7 +736,7 @@ export default function AcousticSynthesizer() {
             </div>
 
             {/* EMF Panel */}
-            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col h-full">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center space-x-2">
                   <Activity className="w-4 h-4 text-white/60" />
@@ -735,7 +759,7 @@ export default function AcousticSynthesizer() {
                     onChange={handleEmfPresetChange}
                     value={EMF_PRESETS.find(p => p.freq === config.emfFreq) ? config.emfFreq : "custom"}
                   >
-                    <option value="custom" disabled hidden>Custom ({config.emfFreq.toFixed(2)} Hz)</option>
+                    <option value="custom" disabled hidden>Custom ({(config.emfFreq || 0).toFixed(2)} Hz)</option>
                     {EMF_PRESETS.map(p => (
                       <option key={p.freq} value={p.freq}>{p.name} ({p.freq} Hz)</option>
                     ))}
@@ -745,7 +769,7 @@ export default function AcousticSynthesizer() {
                 <div className="space-y-2 pt-2">
                   <div className="flex justify-between text-xs font-mono text-white/50">
                     <span>Target Frequency</span>
-                    <span>{config.emfFreq.toFixed(2)} Hz</span>
+                    <span>{(config.emfFreq || 0).toFixed(2)} Hz</span>
                   </div>
                   <input
                     type="range" min="1" max="100" step="0.01"
@@ -796,6 +820,46 @@ export default function AcousticSynthesizer() {
               </div>
             </div>
 
+
+        {/* Neuro-Geometric Architecture */}
+        <div className="mt-8 bg-purple-900/10 border border-purple-500/20 p-6 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+          
+          <div className="flex items-center space-x-2 mb-2 relative z-10">
+            <h2 className="text-sm font-mono text-purple-400 uppercase tracking-widest">Neuro-Geometric Architecture</h2>
+          </div>
+          <p className="text-xs text-white/40 leading-relaxed mb-4 relative z-10">
+            Advanced neural phase modulation, structural cross-frequency coupling, and quantum-level determinism.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 relative z-10">
+            {[
+              { id: 'phaseVelocity4D', name: 'Phase Velocity 4D', desc: 'Constructs standing waves in the cranial cavity (tensor spatialization).' },
+              { id: 'crossFrequencyCoupling', name: 'Theta-Gamma CFC', desc: 'Theta carrier (4-8Hz) modulated by Gamma (30-90Hz) for euphoric synchronization.' },
+              { id: 'harmonicViolations', name: 'Harmonic Violations', desc: 'Predictive error injection via Phi ratio intermodulation for dopamine release.' },
+              { id: 'zeroEntropySpectrum', name: 'Zero Entropy Spectrum', desc: 'Absolute phase coherence. 60dB noise reduction for quantum observer state.' },
+              { id: 'fractalResonance', name: 'Fractal Resonance (φ)', desc: 'Nested Phi octaves mimicking neocortical microcolumn architecture.' },
+              { id: 'biofeedbackSync', name: 'Biofeedback Sync', desc: 'Real-time EEG/ECG mutual oscillator synchronization (approximated internally).' }
+            ].map(feature => (
+              <label key={feature.id} className="flex items-start space-x-3 p-4 rounded-xl bg-black/20 border border-purple-500/20 hover:border-purple-400/50 hover:bg-purple-900/10 transition-all cursor-pointer group">
+                <div className="relative flex items-center justify-center mt-0.5">
+                  <input 
+                    type="checkbox" 
+                    className="peer sr-only"
+                    checked={config[feature.id as keyof AudioConfig] as boolean}
+                    onChange={(e) => applyConfig({ ...config, [feature.id]: e.target.checked })}
+                  />
+                  <div className="w-4 h-4 rounded border border-purple-500/30 peer-checked:bg-purple-500 peer-checked:border-purple-400 transition-colors"></div>
+                  <Check className="w-3 h-3 text-white absolute opacity-0 peer-checked:opacity-100 transition-opacity" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">{feature.name}</span>
+                  <span className="text-xs text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
             {/* Info box */}
             {!config.isochronicEnabled && (
                 <div className="mt-4 bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex items-start space-x-3">
@@ -810,7 +874,7 @@ export default function AcousticSynthesizer() {
         </div>
       </div>
             {/* Volume Slider */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-3 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 shadow-2xl">
+      <div className="fixed bottom-[5rem] md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-3 bg-black/60 border border-white/10 rounded-full px-5 py-2.5 shadow-2xl hud-panel">
         <button 
           onClick={() => {
             const newVal = volume > 0 ? 0 : 1;
@@ -835,14 +899,14 @@ export default function AcousticSynthesizer() {
       {/* Diagnostic Overlay */}
       <button 
         onClick={() => setShowDiagnostics(!showDiagnostics)}
-        className="fixed bottom-4 right-4 z-50 p-2 bg-black/60 backdrop-blur border border-white/20 rounded-full text-white/50 hover:text-white/90 hover:bg-white/10 transition-colors"
+        className="fixed bottom-[5rem] md:bottom-4 right-4 z-50 p-2 bg-black/60 border border-white/20 rounded-full text-white/50 hover:text-white/90 hover:bg-white/10 transition-colors"
         title="Toggle Hardware Diagnostics"
       >
         <Activity className="w-5 h-5" />
       </button>
 
       {showDiagnostics && diagnostics && (
-        <div className="fixed bottom-16 right-4 z-50 w-80 bg-black/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl font-mono text-xs text-white/80 space-y-3">
+        <div className="fixed bottom-[8rem] md:bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] bg-black/90 border border-white/10 p-5 rounded-2xl shadow-2xl font-mono text-xs text-white/80 space-y-3">
           <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
             <span className="text-white/90 font-bold uppercase tracking-wider">DSP Diagnostics</span>
             <span className={`w-2 h-2 rounded-full ${diagnostics.state === 'running' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`}></span>
@@ -877,7 +941,7 @@ export default function AcousticSynthesizer() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
