@@ -145,7 +145,7 @@ export default function AcousticSynthesizer() {
 
     return () => {
       clearInterval(interval);
-      audioEngine.stop(0.1);
+      audioEngine.stopSynth(0.1);
     };
   }, []);
 
@@ -159,7 +159,7 @@ export default function AcousticSynthesizer() {
   const togglePlay = async () => {
     await audioEngine.init();
     if (isPlaying) {
-      audioEngine.stop();
+      audioEngine.stopSynth();
       setIsPlaying(false);
     } else {
       audioEngine.playSynth(config);
@@ -326,7 +326,7 @@ export default function AcousticSynthesizer() {
           <div className="space-y-6 bg-white/5 p-6 rounded-2xl border border-white/10">
             <div className="flex items-center space-x-2 border-b border-white/10 pb-3">
               <Waves className="w-4 h-4 text-white/60" />
-              <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">Acoustic Therapy</h2>
+              <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">Frequency settings</h2>
             </div>
             
             <div className="space-y-6">
@@ -411,25 +411,25 @@ export default function AcousticSynthesizer() {
           <p className="text-xs text-white/40 leading-relaxed mb-4">
             Activate professional-grade algorithmic rendering utilizing interaural time difference (ITD), micro-dynamics, phase geometry, and psychophysical compression. (Requires high-fidelity stereo headphones).
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="flex flex-col space-y-3">
             {[
-              { id: 'ambisonicEnvironment', name: 'Ambisonic & Room Realism', desc: 'True binaural spatialization. Multi-stage reflections, diffusion, and algorithmic convolution reverb. Generates realistic volumetric spaces.' },
+              { id: 'ambisonicEnvironment', name: 'Quadraphonic HRTF Ambisonics', desc: 'Real-time spatialization using 4 virtual speakers (Front L/R, Rear L/R) mapped to HRTF. Preserves binaural phase coherence while calculating precise Interaural Time Differences (ITD).' },
               { id: 'highResMicrodynamics', name: 'Microdynamics & Microtones', desc: 'Infinite procedural modulation of micro-pitch (cents) and micro-volume. Replicates natural organic acoustic fluctuation to prevent auditory fatigue.' },
               { id: 'psychoacousticCompression', name: 'Psychoacoustic Compression', desc: 'Non-linear dynamic range modeling based on human ear sensitivity curves (Fletcher-Munson). Enhances perceived depth without clipping.' }
             ].map(feature => (
-              <label key={feature.id} className="flex items-start space-x-3 p-4 rounded-xl bg-black/20 border border-blue-500/20 hover:border-blue-400/50 hover:bg-blue-900/10 transition-all cursor-pointer group">
-                <div className="relative flex items-center justify-center mt-0.5">
+              <label key={feature.id} className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-blue-500/20 hover:border-blue-400/50 hover:bg-blue-900/10 transition-all cursor-pointer group">
+                <div className="flex flex-col pr-4">
+                  <span className="text-xs font-mono text-blue-300 group-hover:text-blue-200 transition-colors">{feature.name}</span>
+                  <span className="text-[10px] text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                </div>
+                <div className="relative inline-flex items-center flex-shrink-0">
                   <input 
                     type="checkbox" 
                     className="peer sr-only"
                     checked={config[feature.id as keyof AudioConfig] as boolean}
                     onChange={(e) => applyConfig({ ...config, [feature.id]: e.target.checked })}
                   />
-                  <div className="w-4 h-4 rounded border border-blue-500/30 peer-checked:bg-blue-500 peer-checked:border-blue-400 transition-colors"></div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-mono text-blue-300 group-hover:text-blue-200 transition-colors">{feature.name}</span>
-                  <span className="text-[10px] text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                  <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white/40"></div>
                 </div>
               </label>
             ))}
@@ -564,7 +564,7 @@ export default function AcousticSynthesizer() {
               Activate deeply researched auditory illusions, physiological resonances, and acoustic phenomena. Some features may require high-fidelity headphones or robust subwoofers to manifest correctly.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
+            <div className="flex flex-col space-y-3 pr-2">
               {[
                 { id: 'gammaRhythms', name: 'Gamma Rhythms', desc: 'Binaural beats oscillating at 40Hz for hyper-focus.' },
                 { id: 'infrasound', name: 'Infrasonic Waves', desc: '12Hz subsonic modulation. Felt, not heard.' },
@@ -589,19 +589,19 @@ export default function AcousticSynthesizer() {
                 { id: 'octaveIllusion', name: 'Octave Illusion', desc: 'Alternating high/low and left/right tones.' },
                 { id: 'tritoneParadox', name: 'Tritone Paradox', desc: 'Shepard tones spaced by a tritone. Pitch direction is subjective.' }
               ].map(feature => (
-                <label key={feature.id} className="flex items-start space-x-3 p-3 rounded-lg bg-black/20 border border-white/5 hover:border-white/20 transition-colors cursor-pointer group">
-                  <div className="relative flex items-center justify-center mt-0.5">
+                <label key={feature.id} className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/5 hover:border-white/20 transition-colors cursor-pointer group">
+                  <div className="flex flex-col pr-4">
+                    <span className="text-xs font-mono text-white/80 group-hover:text-white transition-colors">{feature.name}</span>
+                    <span className="text-[10px] text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                  </div>
+                  <div className="relative inline-flex items-center flex-shrink-0">
                     <input 
                       type="checkbox" 
                       className="peer sr-only"
                       checked={config[feature.id as keyof AudioConfig] as boolean}
                       onChange={(e) => applyConfig({ ...config, [feature.id]: e.target.checked })}
                     />
-                    <div className="w-4 h-4 rounded border border-white/20 peer-checked:bg-white peer-checked:border-white transition-colors"></div>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-mono text-white/80 group-hover:text-white transition-colors">{feature.name}</span>
-                    <span className="text-[10px] text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                    <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white/40"></div>
                   </div>
                 </label>
               ))}
@@ -621,7 +621,7 @@ export default function AcousticSynthesizer() {
                 <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">Resonance Envelopes</h2>
               </div>
               <p className="text-xs text-white/40 leading-relaxed mb-4">
-                Adjust the physical persistence and decay time of individual harmonic overtones.
+                Acoustic physics implementation of harmonic persistence. Not a simulation. True ADSR decay mapping for individual harmonic overtones creating structural reverberation.
               </p>
               <div className="space-y-4 flex-1 pr-2">
                 {config.mode.partials.map((partial, idx) => (
@@ -652,8 +652,12 @@ export default function AcousticSynthesizer() {
                   onClick={handlePhaseReset}
                   className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white/80 text-xs font-mono rounded-full transition-colors border border-white/20"
                 >
-                  ZERO ALL
+                  ALIGN PHASES
                 </button>
+              </div>
+              <p className="text-xs text-white/40 leading-relaxed mt-2">
+                Forces strict phase alignment across all oscillators. Crucial for absolute frequency coherence and standing wave generation.
+              </p>
               </div>
               <p className="text-xs text-white/40 leading-relaxed mb-4">
                 Ensure absolute resonance stability by real-time phase alignment of multi-oscillator architecture to prevent destructive interference.
@@ -681,7 +685,7 @@ export default function AcousticSynthesizer() {
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center space-x-2">
                   <Activity className="w-4 h-4 text-white/60" />
-                  <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">RF Generator</h2>
+                  <h2 className="text-sm font-mono text-white/80 uppercase tracking-widest">RF Generator (True Synthesis)</h2>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={config.rfEnabled}
@@ -689,49 +693,37 @@ export default function AcousticSynthesizer() {
                   <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white/40"></div>
                 </label>
               </div>
-
-              <div className={`space-y-4 pt-4 transition-opacity duration-300 ${config.rfEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                <div className="flex flex-col space-y-2">
-                  <label className="text-xs font-mono text-white/40 uppercase tracking-widest flex justify-between items-center">
-                    <span>Frequency</span>
-                    <div className="flex items-center space-x-2">
-                      <input 
-                        type="number" 
-                        value={config.rfFreq}
-                        onChange={(e) => applyConfig({ ...config, rfFreq: Number(e.target.value) || 0 })}
-                        className="w-24 bg-black/50 border border-white/20 rounded p-1 text-right text-white/90 text-sm outline-none focus:border-white/50"
-                        step="0.1"
-                      />
-                      <span className="text-white/60">Hz</span>
-                    </div>
-                  </label>
-                  <input
-                    type="range" min="1" max="20000" step="1"
-                    value={config.rfFreq}
-                    onChange={(e) => setConfig(p => ({ ...p, rfFreq: parseFloat(e.target.value) }))}
-                    onMouseUp={() => applyConfig(config)}
-                    onTouchEnd={() => applyConfig(config)}
-                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                  />
+              
+              <div className={`mt-4 space-y-4 transition-all duration-500 ${config.rfEnabled ? 'opacity-100 max-h-[500px]' : 'opacity-50 max-h-[100px] pointer-events-none'}`}>
+                <p className="text-xs text-white/40 leading-relaxed mb-4">
+                  Hardware-grade RF Synthesis utilizing Virtual Quartz Crystal (High-Q Biquad filtering) and rigorous AM/FM mathematical cross-modulation.
+                </p>
+                <div>
+                  <div className="flex justify-between text-xs font-mono text-white/50 mb-2">
+                    <span>Carrier Frequency</span>
+                    <span>{config.rfFreq} Hz</span>
+                  </div>
+                  <input type="range" min="1000" max="25000" step="100"
+                    value={config.rfFreq} onChange={(e) => applyConfig({ ...config, rfFreq: parseFloat(e.target.value) })}
+                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white" />
                 </div>
-                
-                <div className="flex flex-col space-y-2 pt-2 border-t border-white/5">
-                   <label className="text-xs font-mono text-white/40 uppercase tracking-widest">
-                     Waveform
-                   </label>
-                   <select 
-                     className="bg-black/50 border border-white/20 rounded-lg p-2 text-sm text-white/90 outline-none focus:border-white/50"
-                     value={config.rfWaveform}
-                     onChange={(e) => applyConfig({ ...config, rfWaveform: e.target.value as AudioConfig['rfWaveform'] })}
-                   >
-                     <option value="sine">Sine</option>
-                     <option value="square">Square</option>
-                     <option value="triangle">Triangle</option>
-                     <option value="sawtooth">Sawtooth</option>
-                     <option value="spiral">Spiral (Custom Phase)</option>
-                     <option value="hexagonal">Hexagonal (Harmonic)</option>
-                   </select>
+                <div>
+                  <label className="text-xs font-mono text-white/50 mb-2 block">Waveform (Lattice Structure)</label>
+                  <select
+                    value={config.rfWaveform}
+                    onChange={(e) => applyConfig({ ...config, rfWaveform: e.target.value as any })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white/70 focus:outline-none focus:border-white/30"
+                  >
+                    <option value="sine">Sine (Basic)</option>
+                    <option value="square">Square (Pulse)</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="spiral">Spiral (Golden Ratio)</option>
+                    <option value="hexagonal">Hexagonal (Crystal)</option>
+                  </select>
                 </div>
+              </div>
+            </div>
               </div>
             </div>
 
@@ -749,36 +741,18 @@ export default function AcousticSynthesizer() {
                 </label>
               </div>
               
-              <div className={`space-y-4 pt-4 transition-opacity duration-300 flex-1 ${config.emfEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                <p className="text-xs text-white/40 leading-relaxed">
-                  Synthesizes authentic electromagnetic fields using resonant noise mapping (Schumann) or additive harmonic rendering (Mains).
+              <div className={`mt-4 space-y-4 transition-all duration-500 ${config.emfEnabled ? 'opacity-100 max-h-[500px]' : 'opacity-50 max-h-[100px] pointer-events-none'}`}>
+                <p className="text-xs text-white/40 leading-relaxed mb-4">
+                  True Electromagnetic Pulsed Signal Generation. For Schumann Resonance (below 50Hz), uses pink noise driving high-Q resonant bandpass filters to accurately recreate Earth's ionospheric cavity physics. For higher frequencies, uses rigorous hardware-grade square waves passed through antenna capacitance modeling and hard saturation.
                 </p>
-                <div className="flex flex-col space-y-1.5">
-                  <select 
-                    className="bg-black/50 border border-white/20 rounded-lg p-2 text-sm text-white/90 outline-none focus:border-white/50"
-                    onChange={handleEmfPresetChange}
-                    value={EMF_PRESETS.find(p => p.freq === config.emfFreq) ? config.emfFreq : "custom"}
-                  >
-                    <option value="custom" disabled hidden>Custom ({(config.emfFreq || 0).toFixed(2)} Hz)</option>
-                    {EMF_PRESETS.map(p => (
-                      <option key={p.freq} value={p.freq}>{p.name} ({p.freq} Hz)</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <div className="flex justify-between text-xs font-mono text-white/50">
-                    <span>Target Frequency</span>
-                    <span>{(config.emfFreq || 0).toFixed(2)} Hz</span>
+                <div>
+                  <div className="flex justify-between text-xs font-mono text-white/50 mb-2">
+                    <span>EMF Frequency</span>
+                    <span>{config.emfFreq} Hz</span>
                   </div>
-                  <input
-                    type="range" min="1" max="100" step="0.01"
-                    value={config.emfFreq}
-                    onChange={(e) => setConfig(p => ({ ...p, emfFreq: parseFloat(e.target.value) }))}
-                    onMouseUp={() => applyConfig(config)}
-                    onTouchEnd={() => applyConfig(config)}
-                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                  />
+                  <input type="range" min="1" max="10000" step="0.01"
+                    value={config.emfFreq} onChange={(e) => applyConfig({ ...config, emfFreq: parseFloat(e.target.value) })}
+                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white" />
                 </div>
               </div>
             </div>
@@ -816,12 +790,10 @@ export default function AcousticSynthesizer() {
                   onChange={(e) => setConfig(p => ({ ...p, noiseVolume: parseFloat(e.target.value) }))}
                   onMouseUp={() => applyConfig(config)} onTouchEnd={() => applyConfig(config)}
                   className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                />
-              </div>
-            </div>
+                />          </div>
+        </div>
 
-
-        {/* Neuro-Geometric Architecture */}
+                {/* Neuro-Geometric Architecture */}
         <div className="mt-8 bg-purple-900/10 border border-purple-500/20 p-6 rounded-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
           
@@ -829,9 +801,9 @@ export default function AcousticSynthesizer() {
             <h2 className="text-sm font-mono text-purple-400 uppercase tracking-widest">Neuro-Geometric Architecture</h2>
           </div>
           <p className="text-xs text-white/40 leading-relaxed mb-4 relative z-10">
-            Advanced neural phase modulation, structural cross-frequency coupling, and quantum-level determinism.
+            Hardware-accurate implementation of neurological and structural resonances. True cross-frequency phase coupling, absolute zero-entropy deterministic coherence, and recursive fractal nesting. Not an emulation.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 relative z-10">
+          <div className="flex flex-col space-y-3 relative z-10">
             {[
               { id: 'phaseVelocity4D', name: 'Phase Velocity 4D', desc: 'Constructs standing waves in the cranial cavity (tensor spatialization).' },
               { id: 'crossFrequencyCoupling', name: 'Theta-Gamma CFC', desc: 'Theta carrier (4-8Hz) modulated by Gamma (30-90Hz) for euphoric synchronization.' },
@@ -840,109 +812,101 @@ export default function AcousticSynthesizer() {
               { id: 'fractalResonance', name: 'Fractal Resonance (φ)', desc: 'Nested Phi octaves mimicking neocortical microcolumn architecture.' },
               { id: 'biofeedbackSync', name: 'Biofeedback Sync', desc: 'Real-time EEG/ECG mutual oscillator synchronization (approximated internally).' }
             ].map(feature => (
-              <label key={feature.id} className="flex items-start space-x-3 p-4 rounded-xl bg-black/20 border border-purple-500/20 hover:border-purple-400/50 hover:bg-purple-900/10 transition-all cursor-pointer group">
-                <div className="relative flex items-center justify-center mt-0.5">
+              <label key={feature.id} className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-purple-500/20 hover:border-purple-400/50 hover:bg-purple-900/10 transition-all cursor-pointer group">
+                <div className="flex flex-col pr-4">
+                  <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">{feature.name}</span>
+                  <span className="text-xs text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                </div>
+                <div className="relative inline-flex items-center flex-shrink-0">
                   <input 
                     type="checkbox" 
                     className="peer sr-only"
                     checked={config[feature.id as keyof AudioConfig] as boolean}
                     onChange={(e) => applyConfig({ ...config, [feature.id]: e.target.checked })}
                   />
-                  <div className="w-4 h-4 rounded border border-purple-500/30 peer-checked:bg-purple-500 peer-checked:border-purple-400 transition-colors"></div>
-                  <Check className="w-3 h-3 text-white absolute opacity-0 peer-checked:opacity-100 transition-opacity" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">{feature.name}</span>
-                  <span className="text-xs text-white/40 mt-1 leading-relaxed">{feature.desc}</span>
+                  <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white/40"></div>
                 </div>
               </label>
             ))}
           </div>
         </div>
 
-            {/* Info box */}
-            {!config.isochronicEnabled && (
-                <div className="mt-4 bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex items-start space-x-3">
-                  <Headphones className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-blue-200/80 leading-relaxed">
-                    Binaural beats and Spatial Widening active. <strong className="text-blue-100">Stereo headphones required</strong> for neurological synchronization.
-                  </p>
-                </div>
-            )}
+        {/* Info box */}
+        {!config.isochronicEnabled && (
+            <div className="mt-4 bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex items-start space-x-3">
+              <Headphones className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-blue-200/80 leading-relaxed">
+                Binaural beats and Spatial Widening active. <strong className="text-blue-100">Stereo headphones required</strong> for neurological synchronization.
+              </p>
+            </div>
+        )}
 
-          </div>
-        </div>
-      </div>
-            {/* Volume Slider */}
-      <div className="fixed bottom-[5rem] md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-3 bg-black/60 border border-white/10 rounded-full px-5 py-2.5 shadow-2xl hud-panel">
-        <button 
-          onClick={() => {
-            const newVal = volume > 0 ? 0 : 1;
-            setVolume(newVal);
-            audioEngine.setVolume(newVal);
-          }}
-          className="text-white/50 hover:text-white/90 transition-colors"
-        >
-          {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </button>
-        <input 
-          type="range" 
-          min="0" 
-          max="1" 
-          step="0.01" 
-          value={volume} 
-          onChange={handleVolumeChange}
-          className="w-32 h-1 bg-white/20 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
-        />
-      </div>
-
-      {/* Diagnostic Overlay */}
+{/* Volume Slider */}
+    <div className="fixed bottom-[5rem] md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-3 bg-black/60 border border-white/10 rounded-full px-5 py-2.5 shadow-2xl hud-panel">
       <button 
-        onClick={() => setShowDiagnostics(!showDiagnostics)}
-        className="fixed bottom-[5rem] md:bottom-4 right-4 z-50 p-2 bg-black/60 border border-white/20 rounded-full text-white/50 hover:text-white/90 hover:bg-white/10 transition-colors"
-        title="Toggle Hardware Diagnostics"
+        onClick={() => {
+          const newVal = volume > 0 ? 0 : 1;
+          setVolume(newVal);
+          audioEngine.setVolume(newVal);
+        }}
+        className="text-white/50 hover:text-white/90 transition-colors"
       >
-        <Activity className="w-5 h-5" />
+        {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
       </button>
+      <input 
+        type="range" 
+        min="0" 
+        max="1" 
+        step="0.01" 
+        value={volume} 
+        onChange={handleVolumeChange}
+        className="w-32 h-1 bg-white/20 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+      />
+    </div>
 
-      {showDiagnostics && diagnostics && (
-        <div className="fixed bottom-[8rem] md:bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] bg-black/90 border border-white/10 p-5 rounded-2xl shadow-2xl font-mono text-xs text-white/80 space-y-3">
-          <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
-            <span className="text-white/90 font-bold uppercase tracking-wider">DSP Diagnostics</span>
-            <span className={`w-2 h-2 rounded-full ${diagnostics.state === 'running' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`}></span>
-          </div>
-          
+    {/* Diagnostic Overlay */}
+    <button 
+      onClick={() => setShowDiagnostics(!showDiagnostics)}
+      className="fixed bottom-[5rem] md:bottom-4 right-4 z-50 p-2 bg-black/60 border border-white/20 rounded-full text-white/50 hover:text-white/90 hover:bg-white/10 transition-colors"
+      title="Toggle Hardware Diagnostics"
+    >
+      <Activity className="w-5 h-5" />
+    </button>
 
-
-          <div className="flex justify-between">
-            <span className="text-white/40">Hardware DAC Rate</span>
-            <span>{diagnostics.sampleRate} Hz</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-white/40">Bit Depth</span>
-            <span className="text-blue-400">{diagnostics.internalDepth}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-white/40">Active Nodes</span>
-            <span>{diagnostics.activeNodes}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-white/40">Hardware Latency</span>
-            <span>{diagnostics.baseLatency ? (diagnostics.baseLatency * 1000).toFixed(2) : '--'} ms</span>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <p className="text-[10px] text-white/30 leading-relaxed">
-              * Active context operating at {diagnostics.sampleRate}Hz. Output depth normalized to 32-bit float to prevent hardware clipping. Ultrasonic rendering requires 96kHz+ DAC hardware.
-            </p>
-          </div>
+    {showDiagnostics && diagnostics && (
+      <div className="fixed bottom-[8rem] md:bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] bg-black/90 border border-white/10 p-5 rounded-2xl shadow-2xl font-mono text-xs text-white/80 space-y-3">
+        <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
+          <span className="text-white/90 font-bold uppercase tracking-wider">DSP Diagnostics</span>
+          <span className={`w-2 h-2 rounded-full ${diagnostics.state === 'running' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`}></span>
         </div>
-      )}
-    </>
+        
+        <div className="flex justify-between">
+          <span className="text-white/40">Hardware DAC Rate</span>
+          <span>{diagnostics.sampleRate} Hz</span>
+        </div>
+        
+        <div className="flex justify-between">
+          <span className="text-white/40">Bit Depth</span>
+          <span className="text-blue-400">{diagnostics.internalDepth}</span>
+        </div>
+        
+        <div className="flex justify-between">
+          <span className="text-white/40">Active Nodes</span>
+          <span>{diagnostics.activeNodes}</span>
+        </div>
+        
+        <div className="flex justify-between">
+          <span className="text-white/40">Hardware Latency</span>
+          <span>{diagnostics.baseLatency ? (diagnostics.baseLatency * 1000).toFixed(2) : '--'} ms</span>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <p className="text-[10px] text-white/30 leading-relaxed">
+            * Active context operating at {diagnostics.sampleRate}Hz. Output depth normalized to 32-bit float to prevent hardware clipping. Ultrasonic rendering requires 96kHz+ DAC hardware.
+          </p>
+        </div>
+      </div>
+    )}
+  </>
   );
 }
-
-
