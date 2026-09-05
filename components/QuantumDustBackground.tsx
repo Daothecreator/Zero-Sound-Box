@@ -195,7 +195,7 @@ export default function QuantumDustBackground({ isPlaying, config, activeMode }:
            const f_i = BANDS[i].freq;
            const envelope = 0.6 + 0.4 * Math.sin(t * 0.3 + i);
            const noise = Math.random();
-           let simulatedAmp = (
+           const simulatedAmp = (
              Math.sin(2 * Math.PI * f_i * t) * 0.5 + 0.5 +
              Math.sin(2 * Math.PI * f_i * PHI * t) * 0.25 +
              noise * 0.1

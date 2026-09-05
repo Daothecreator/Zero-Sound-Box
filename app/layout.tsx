@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RF Acoustic Synthesizer",
-  description: "High-fidelity Zeno-effect frequency modulation",
+  title: "Vivifactor Elements",
+  description: "A precise, non-commercial acoustic and visual instrument.",
 };
 
 export default function RootLayout({

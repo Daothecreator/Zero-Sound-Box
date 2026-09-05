@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Check, Radio, Play, Square, Activity, Waves, Headphones, BrainCircuit, Wind, Sliders, AlignCenter, Volume2, VolumeX } from 'lucide-react';
 import { audioEngine, AudioConfig } from '@/lib/audio';
 import dynamic from 'next/dynamic';
+import Tooltip from './Tooltip';
+import { FREQUENCY_ENCYCLOPEDIA } from '@/lib/frequencyEncyclopedia';
 
 import BinauralFieldMap from "./BinauralFieldMap";
 const QuantumDustBackground = dynamic(() => import('./QuantumDustBackground'), { ssr: false });
@@ -80,6 +82,9 @@ export default function AcousticSynthesizer() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [volume, setVolume] = useState(1.0);
   const [visualizerMode, setVisualizerMode] = useState<string>('spiral');
+  const [language, setLanguage] = useState<'en' | 'ru'>('en');
+  const [showEncyclopedia, setShowEncyclopedia] = useState(false);
+  const isRu = language === 'ru';
   
   const [config, setConfig] = useState<AudioConfig>({
     leftFreq: 136.1,
@@ -243,30 +248,87 @@ export default function AcousticSynthesizer() {
     audioEngine.setVolume(newVal);
   };
 
+  const copy = {
+    title: isRu ? 'VIVIFACTOR ELEMENTS' : 'VIVIFACTOR ELEMENTS',
+    subtitle: isRu ? 'Точный аудиовизуальный инструмент для исследования звука' : 'Precision acoustic and visual instrument for exploring sound',
+    encyclopedia: isRu ? 'Энциклопедия частот' : 'Frequency encyclopedia',
+    language: isRu ? 'English' : 'Русский',
+    play: isRu ? 'Запустить аудиодвижок' : 'Start the audio engine',
+    visual: isRu ? 'Режим визуализации' : 'Visualization mode',
+  };
+
   return (
     <>
     <QuantumDustBackground isPlaying={isPlaying} config={config} activeMode={visualizerMode} />
 
+    <div className="fixed right-4 top-4 z-[120] flex items-center gap-2">
+      <Tooltip text={isRu ? 'Переключает подписи интерфейса между русским и английским языками.' : 'Switches interface labels between English and Russian.'}>
+        <button
+          type="button"
+          className="glass-button rounded-lg px-3 py-2 text-[10px] font-mono uppercase tracking-widest text-white/75"
+          onClick={() => setLanguage(isRu ? 'en' : 'ru')}
+        >
+          {copy.language}
+        </button>
+      </Tooltip>
+      <Tooltip text={isRu ? 'Открывает технический справочник частот от инфразвука до ультразвука.' : 'Opens a technical reference from infrasound through ultrasound.'}>
+        <button
+          type="button"
+          className="glass-button rounded-lg px-3 py-2 text-[10px] font-mono uppercase tracking-widest text-white/75"
+          onClick={() => setShowEncyclopedia(true)}
+        >
+          {copy.encyclopedia}
+        </button>
+      </Tooltip>
+    </div>
+
+    {showEncyclopedia && (
+      <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="frequency-encyclopedia-title">
+        <div className="max-h-[86vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/20 bg-[#08090d]/95 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div>
+              <h2 id="frequency-encyclopedia-title" className="text-sm font-mono uppercase tracking-widest text-white/90">{copy.encyclopedia}</h2>
+              <p className="mt-1 text-xs text-white/45">{isRu ? 'Диапазоны описаны по наблюдаемым акустическим свойствам; причинные медицинские обещания исключены.' : 'Ranges describe observable acoustic properties; unsupported medical claims are excluded.'}</p>
+            </div>
+            <button type="button" className="glass-button rounded-lg px-3 py-2 text-xs text-white/75" onClick={() => setShowEncyclopedia(false)} aria-label="Close frequency encyclopedia">×</button>
+          </div>
+          <div className="custom-scrollbar max-h-[calc(86vh-6rem)] overflow-y-auto p-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              {FREQUENCY_ENCYCLOPEDIA.map((entry) => (
+                <article key={entry.range} className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="text-sm font-medium text-white/85">{isRu ? entry.ruTitle : entry.title}</h3>
+                    <span className="whitespace-nowrap font-mono text-[10px] text-cyan-300/80">{entry.range}</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-white/55">{isRu ? entry.ruSummary : entry.summary}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Visualizer Mode Selector */}
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col space-y-2 hud-panel">
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col space-y-2 hud-panel" aria-label={copy.visual}>
       {[
         { id: 'spiral', label: 'φ-Spiral' },
         { id: 'lorenz', label: 'Lorenz' },
         { id: 'crystal', label: 'Crystal' },
         { id: 'ring', label: 'Ring' }
       ].map((mode) => (
+        <Tooltip key={mode.id} text={`${mode.label}: ${isRu ? 'меняет геометрию частиц, не изменяя аудиосигнал.' : 'changes particle geometry without changing the audio signal.'}`}>
         <button
-          key={mode.id}
           onClick={() => setVisualizerMode(mode.id)}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+          className={`glass-button w-10 h-10 rounded-full flex items-center justify-center transition-all ${
             visualizerMode === mode.id 
               ? 'bg-white/20 border border-white/50 text-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
               : 'bg-black/40 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80'
           }`}
-          title={mode.label}
         >
           <div className="text-[10px] font-mono leading-none">{mode.id.substring(0, 3).toUpperCase()}</div>
         </button>
+        </Tooltip>
       ))}
     </div>
 
@@ -277,9 +339,9 @@ export default function AcousticSynthesizer() {
     >
       <div className="z-10 flex flex-col items-center space-y-8 w-full pt-2 pb-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-light tracking-widest text-white/90">NEURO-ACOUSTIC MODULATOR</h1>
+          <h1 className="text-3xl font-light tracking-[0.28em] text-white/95">{copy.title}</h1>
           <p className="text-sm text-white/50 font-mono tracking-widest uppercase mb-6">
-            Physiological & Psychoacoustic Frequency Engine
+            {copy.subtitle}
           </p>
         </div>
         
@@ -303,9 +365,11 @@ export default function AcousticSynthesizer() {
           </p>
         </div>
 
+        <Tooltip text={copy.play}>
         <button
           onClick={togglePlay}
-          className={`w-28 h-28 rounded-full flex items-center justify-center transition-all duration-700 ease-in-out ${
+          aria-label={copy.play}
+          className={`glass-button w-28 h-28 rounded-full flex items-center justify-center transition-all duration-700 ease-in-out ${
             isPlaying 
               ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.3)]' 
               : 'bg-white/5 text-white border border-white/20 hover:bg-white/10 hover:border-white/40'
@@ -317,6 +381,7 @@ export default function AcousticSynthesizer() {
             <Play className="w-12 h-12 ml-2 opacity-90" />
           )}
         </button>
+        </Tooltip>
 
 
         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-4 pt-4 md:px-8">
@@ -743,7 +808,7 @@ export default function AcousticSynthesizer() {
               
               <div className={`mt-4 space-y-4 transition-all duration-500 ${config.emfEnabled ? 'opacity-100 max-h-[500px]' : 'opacity-50 max-h-[100px] pointer-events-none'}`}>
                 <p className="text-xs text-white/40 leading-relaxed mb-4">
-                  True Electromagnetic Pulsed Signal Generation. For Schumann Resonance (below 50Hz), uses pink noise driving high-Q resonant bandpass filters to accurately recreate Earth's ionospheric cavity physics. For higher frequencies, uses rigorous hardware-grade square waves passed through antenna capacitance modeling and hard saturation.
+                  True Electromagnetic Pulsed Signal Generation. For Schumann Resonance (below 50Hz), uses pink noise driving high-Q resonant bandpass filters to accurately recreate Earth&apos;s ionospheric cavity physics. For higher frequencies, uses rigorous hardware-grade square waves passed through antenna capacitance modeling and hard saturation.
                 </p>
                 <div>
                   <div className="flex justify-between text-xs font-mono text-white/50 mb-2">

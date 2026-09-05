@@ -87,12 +87,13 @@ export class AudioEngine {
   public async init() {
     if (!this.ctx!) {
       try {
-        // Request 96kHz for actual ultrasonic frequencies
-        this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 96000 });
+        // Use the device-native rate so mobile, desktop and low-power browsers
+        // all receive a context they can actually render without resampling.
+        this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       } catch (e) {
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-      
+
       this.compressor = this.ctx!.createDynamicsCompressor();
       this.compressor.threshold.value = -12;
       this.compressor.knee.value = 30;
@@ -158,6 +159,11 @@ export class AudioEngine {
       await this.ctx.resume();
     }
     this.ensureNoiseBuffer();
+  }
+
+  private safeFrequency(value: number) {
+    if (!this.ctx || !Number.isFinite(value)) return 1;
+    return Math.min(Math.max(value, 0.1), this.ctx.sampleRate * 0.45);
   }
 
   private applyPhase(osc: OscillatorNode, phaseDeg: number | undefined) {
@@ -656,7 +662,7 @@ export class AudioEngine {
       // Route preMaster through amNode
       // Connect AM node directly to masterGain's gain param
       iGain.disconnect();
-      iGain.connect(this.masterGain!!.gain);
+      iGain.connect(this.masterGain!.gain);
       
       infLfo.start(now);
       dcOffset.start(now);
@@ -741,7 +747,7 @@ export class AudioEngine {
       const shaper = this.ctx!.createWaveShaper();
       const curve = new Float32Array(256);
       for(let i=0; i<256; i++) {
-         let x = (i * 2 / 256) - 1;
+         const x = (i * 2 / 256) - 1;
          curve[i] = (x < -0.9 || x > 0.9) ? Math.sign(x) * 0.9 : x;
       }
       shaper.curve = curve;
@@ -977,7 +983,7 @@ export class AudioEngine {
       // Emits actual ultrasonic frequencies.
       const osc = this.ctx!.createOscillator();
       osc.type = 'sine';
-      osc.frequency.value = config.acousticLevitation ? 40000 : (config.sonoluminescence ? 25000 : 30000); 
+      osc.frequency.value = this.safeFrequency(config.acousticLevitation ? 40000 : (config.sonoluminescence ? 25000 : 30000));
       
       const outGain = this.ctx!.createGain();
       outGain.gain.value = 0.8;
@@ -1009,7 +1015,7 @@ export class AudioEngine {
       const freqs = [174, 285, 396, 417, 528, 639, 741, 852, 963];
       const osc = this.ctx!.createOscillator();
       
-      let t = now;
+      const t = now;
       osc.frequency.setValueAtTime(freqs[0], t);
       freqs.forEach((f, i) => {
         osc.frequency.exponentialRampToValueAtTime(f, t + i * 2);
@@ -1228,8 +1234,9 @@ export class AudioEngine {
     subGain.gain.setTargetAtTime(0.7, now, 1.5); // Warm, deep tactile bass roll-in
     this.synthNodes.push(subOsc, subGain);
 
-    const baseFreq = config.leftFreq;
-    const globalBeat = config.rightFreq - config.leftFreq;
+    const baseFreq = this.safeFrequency(config.leftFreq);
+    const rightFreq = this.safeFrequency(config.rightFreq);
+    const globalBeat = Math.max(0, rightFreq - baseFreq);
 
     // MODULATOR LFO (Isochronic or Slow Breathing)
     const modulatorLFO = this.ctx!.createOscillator();
@@ -1261,7 +1268,7 @@ export class AudioEngine {
     fundOscR.setPeriodicWave(lushWaveform);
     
     fundOscL.frequency.value = baseFreq;
-    fundOscR.frequency.value = config.isochronicEnabled ? baseFreq : config.rightFreq;
+    fundOscR.frequency.value = config.isochronicEnabled ? baseFreq : rightFreq;
     
     const fundGainL = this.ctx!.createGain();
     const fundGainR = this.ctx!.createGain();
@@ -1436,7 +1443,7 @@ export class AudioEngine {
 
         osc.connect(gain);
         gain.connect(panner);
-        panner.connect(this.masterGain!!); // Panner mixes directly to master
+        panner.connect(this.masterGain!); // Panner mixes directly to master
 
         osc.start(now);
         // Microdynamics
